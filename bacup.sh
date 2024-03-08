@@ -21,7 +21,7 @@ root=$namedisk'2'
 echo '                Вы выьрали диск = '$namedisk
 echo '                           boot = '$boot
 echo '                           root = '$root
-sleep 3
+
 PS3="Выберите 1 ПРОДОЛЖИТЬ если 2 то ВЫХОД :"
 select choice in "ПРОДОЛЖИТЬ" "Exit"; do
 case $REPLY in
@@ -65,8 +65,8 @@ sfdisk -d /dev/$namedisk >./$bacdir/sda.dump
 }
 #------------------------разные варианты сжатия--------------------
 nogz() {
-partclone.vfat -c -N -s /dev/sda1 -o ./$bacdir/sda1.pcl
-partclone.btrfs -c -N -s /dev/sda2 -o ./$bacdir/sda2.pcl
+partclone.vfat -c -N -s /dev/$boot -o ./$bacdir/sda1.pcl
+partclone.btrfs -c -N -s /dev/$root -o ./$bacdir/sda2.pcl
 }
 gz0() {
 partclone.vfat -c -N -s /dev/$boot | gzip -c0>./$bacdir/sda1.pcl.gz
@@ -77,8 +77,8 @@ partclone.vfat -c -N -s /dev/$boot | gzip -c6>./$bacdir/sda1.pcl.gz
 partclone.btrfs -c -N -s /dev/$root | gzip -c6>./$bacdir/sda2.pcl.gz
 }
 gz9() {
-partclone.vfat -c -N -s /dev/sda1 | gzip -c9>./$bacdir/sda1.pcl.gz
-partclone.btrfs -c -N -s /dev/sda2 | gzip -c9>./$bacdir/sda2.pcl.gz
+partclone.vfat -c -N -s /dev/$boot | gzip -c9>./$bacdir/sda1.pcl.gz
+partclone.btrfs -c -N -s /dev/$root | gzip -c9>./$bacdir/sda2.pcl.gz
 }
 #------------------------------------------------------------------
 
@@ -94,10 +94,10 @@ echo '
 PS3="Выберите тип соединения 1 или 2 если 3 то выход :"
 select choice in "Без сжатия" "минимальное сжатие" "Среднее сжатие" "Максимальное сжатие" "ВЫХОД без создания becap"; do
 case $REPLY in
-    1) $readmi;$damp_;$nogz;break;;
-    2) $readmi;$damp_;$gz0;break;;
-    3) $readmi;$damp_;$gz6;break;;
-    4) $readmi;$damp_;$gz9;break;;
+    1) readmi;damp_;nogz;break;;
+    2) readmi;damp_;gz0;break;;
+    3) readmi;damp_;gz6;break;;
+    4) readmi;damp_;gz9;break;;
     5) exit;;
     *) echo "Неправильный выбор !";;
 esac
@@ -105,9 +105,9 @@ done
 
 
 ###########################################################################
-#-------Секция создания скрипта восстановления из бекапа на физический диск
+#-Секция создания скрипта over.sh для восстановления из бекапа на физический диск
 echo "#!/bin/bash">./$bacdir/over.sh
-#####---------------диалог назначения namedisk-----------------------------
+#####---------------диалог назначения диска куда восстанавливать-----------------------------
 echo "clear">>./$bacdir/over.sh
 echo "lsblk">>./$bacdir/over.sh
 echo "#fdisk -l">>./$bacdir/over.sh
