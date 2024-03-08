@@ -56,29 +56,30 @@ read l
 ###################################################################
 #-----------Создание readmi.txt и запись в него время начала-------
 readmi() {
-echo "$l" >./$bacdir/readmi.txt
-echo "$(date +%F-%H%M-%S)" >>./$bacdir/readmi.txt
+    echo "$l" >./$bacdir/readmi.txt
+    echo "$(date +%F-%H%M-%S)" >>./$bacdir/readmi.txt
 }
 #----------------Запись дамп диска в файл--sda.dump----------------
 damp_() { 
-sfdisk -d /dev/$namedisk >./$bacdir/sda.dump
+    sfdisk -d /dev/$namedisk >./$bacdir/sda.dump
 }
 #------------------------разные варианты сжатия--------------------
 nogz() {
-partclone.vfat -c -N -s /dev/$boot -o ./$bacdir/sda1.pcl
-partclone.btrfs -c -N -s /dev/$root -o ./$bacdir/sda2.pcl
+    partclone.vfat -c -N -s /dev/$boot -o ./$bacdir/sda1.pcl
+    partclone.btrfs -c -N -s /dev/$root -o ./$bacdir/sda2.pcl
 }
 gz0() {
-partclone.vfat -c -N -s /dev/$boot | gzip -c0>./$bacdir/sda1.pcl.gz
-partclone.btrfs -c -N -s /dev/$root | gzip -c0>./$bacdir/sda2.pcl.gz
+
+    partclone.vfat -c -N -s /dev/$boot | gzip -c0>./$bacdir/sda1.pcl.gz
+    partclone.btrfs -c -N -s /dev/$root | gzip -c0>./$bacdir/sda2.pcl.gz
 }
 gz6() {
-partclone.vfat -c -N -s /dev/$boot | gzip -c6>./$bacdir/sda1.pcl.gz
-partclone.btrfs -c -N -s /dev/$root | gzip -c6>./$bacdir/sda2.pcl.gz
+    partclone.vfat -c -N -s /dev/$boot | gzip -c6>./$bacdir/sda1.pcl.gz
+    partclone.btrfs -c -N -s /dev/$root | gzip -c6>./$bacdir/sda2.pcl.gz
 }
 gz9() {
-partclone.vfat -c -N -s /dev/$boot | gzip -c9>./$bacdir/sda1.pcl.gz
-partclone.btrfs -c -N -s /dev/$root | gzip -c9>./$bacdir/sda2.pcl.gz
+    partclone.vfat -c -N -s /dev/$boot | gzip -c9>./$bacdir/sda1.pcl.gz
+    partclone.btrfs -c -N -s /dev/$root | gzip -c9>./$bacdir/sda2.pcl.gz
 }
 #------------------------------------------------------------------
 
