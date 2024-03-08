@@ -31,36 +31,42 @@ case $REPLY in
 esac
 done
 #################################################################
+clear
 t=$(date +%F-%H%M-%S)
-echo '  В текущей директории будет создана поддиректория для размещение бекапов.
-         Во второй части наименования директории будет текущая дата и время а 
-         первая часть на ваше усмотрение (МОЖНО ОСТАВИТЬ ПУСТЫМ)
-                    После ввода    нажмите   "ENTER" '
+echo '
+
+
+
+                В текущей директории будет создана поддиректория для размещение бекапов.
+                Во второй части наименования директории будет текущая дата и время а 
+                первая часть на ваше усмотрение (МОЖНО ОСТАВИТЬ ПУСТЫМ)
+                        После ввода    нажмите   "ENTER" '
 read -p "
+
                                                               -> Введите значение : " namedir
 bacdir=$namedir$t
 mkdir $bacdir
 clear
-echo "Напечатайте примечания о копии"
+echo "
+
+            Напечатайте примечания о копии
+
+"
 read l
-#echo $l
-#touch ./$bacdir/l.txt
+echo '
+            Выберите степень сжатия архив
+'
 echo "$l" >./$bacdir/readmi.txt
-#echo $t
-#date_time=`date "+%Y%m%d%H%M%S"`
-#echo $date_time
-#sleep 5
-#echo $date_time
-#echo $(date +%F-%H%M-%S)
-#exit 1
 echo "$(date +%F-%H%M-%S)" >>./$bacdir/readmi.txt
 sfdisk -d /dev/$namedisk >./$bacdir/sda.dump
 #partclone.vfat -c -N -s /dev/sda1 -o ./$bacdir/sda1.pcl
 #partclone.btrfs -c -N -s /dev/sda2 -o ./$bacdir/sda2.pcl
-partclone.vfat -c -N -s /dev/$boot | gzip -c>./$bacdir/sda1.pcl.gz
-partclone.btrfs -c -N -s /dev/$root | gzip -c>./$bacdir/sda2.pcl.gz
+#partclone.vfat -c -N -s /dev/$boot | gzip -c>./$bacdir/sda1.pcl.gz
+#partclone.btrfs -c -N -s /dev/$root | gzip -c>./$bacdir/sda2.pcl.gz
 #partclone.vfat -c -N -s /dev/sda1 | gzip -c9>./$bacdir/sda1.pcl.gz
 #partclone.btrfs -c -N -s /dev/sda2 | gzip -c9>./$bacdir/sda2.pcl.gz
+partclone.vfat -c -N -s /dev/$boot | gzip $gz>./$bacdir/sda1.pcl.gz
+partclone.btrfs -c -N -s /dev/$root | gzip $gz>./$bacdir/sda2.pcl.gz
 ###################################################################
 echo "#!/bin/bash">./$bacdir/over.sh
 #####---------------диалог назначения namedisk-----------------------------
