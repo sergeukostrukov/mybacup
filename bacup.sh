@@ -53,6 +53,13 @@ echo "
 
 "
 read l
+###################################################################
+#-----------Настройка сжатия архива--------------------------
+
+nogz=(partclone.vfat -c -N -s /dev/sda1 -o ./$bacdir/sda1.pcl;partclone.btrfs -c -N -s /dev/sda2 -o ./$bacdir/sda2.pcl)
+gz0=(partclone.vfat -c -N -s /dev/$boot | gzip -c>./$bacdir/sda1.pcl.gz;partclone.btrfs -c -N -s /dev/$root | gzip -c>./$bacdir/sda2.pcl.gz)
+gz6=(partclone.vfat -c -N -s /dev/$boot | gzip -c6>./$bacdir/sda1.pcl.gz;partclone.btrfs -c -N -s /dev/$root | gzip -c6>./$bacdir/sda2.pcl.gz)
+gz9=(partclone.vfat -c -N -s /dev/sda1 | gzip -c9>./$bacdir/sda1.pcl.gz;partclone.btrfs -c -N -s /dev/sda2 | gzip -c9>./$bacdir/sda2.pcl.gz)
 echo '
                      Выберите степень сжатия архив
         Чем больше сжатие тем дольше создаётся.
@@ -60,11 +67,12 @@ echo '
         Среднее сжатие оптимальные параметры по скорости и степени сжатия.
 '
 PS3="Выберите тип соединения 1 или 2 если 3 то выход :"
-select choice in "Без зжатия" "Среднее сжатие" "Максимальное"; do
+select choice in "Без зжатия" "минимальное сжатие" "Среднее сжатие" "Максимальное"; do
 case $REPLY in
-    1) gz=--fast;break;;
-    2) gz=-c6;break;;
-    3) gz=--best;break;;
+    1) $nogz;break;;
+    2) $gz0;break;;
+    3) $gz6;break;;
+    4) $gz9;break;;
     *) echo "Неправильный выбор !";;
 esac
 done
@@ -72,14 +80,7 @@ done
 echo "$l" >./$bacdir/readmi.txt
 echo "$(date +%F-%H%M-%S)" >>./$bacdir/readmi.txt
 sfdisk -d /dev/$namedisk >./$bacdir/sda.dump
-#partclone.vfat -c -N -s /dev/sda1 -o ./$bacdir/sda1.pcl
-#partclone.btrfs -c -N -s /dev/sda2 -o ./$bacdir/sda2.pcl
-#partclone.vfat -c -N -s /dev/$boot | gzip -c>./$bacdir/sda1.pcl.gz
-#partclone.btrfs -c -N -s /dev/$root | gzip -c>./$bacdir/sda2.pcl.gz
-#partclone.vfat -c -N -s /dev/sda1 | gzip -c9>./$bacdir/sda1.pcl.gz
-#partclone.btrfs -c -N -s /dev/sda2 | gzip -c9>./$bacdir/sda2.pcl.gz
-partclone.vfat -c -N -s /dev/$boot | gzip $gz>./$bacdir/sda1.pcl.gz
-partclone.btrfs -c -N -s /dev/$root | gzip $gz>./$bacdir/sda2.pcl.gz
+
 ###################################################################
 echo "#!/bin/bash">./$bacdir/over.sh
 #####---------------диалог назначения namedisk-----------------------------
