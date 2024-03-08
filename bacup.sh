@@ -55,21 +55,41 @@ echo "
 read l
 ###################################################################
 #-----------Создание readmi.txt и запись в него время начала-------
-readmi=(echo "$l" >./$bacdir/readmi.txt;echo "$(date +%F-%H%M-%S)" >>./$bacdir/readmi.txt)
+readmi() {
+echo "$l" >./$bacdir/readmi.txt
+echo "$(date +%F-%H%M-%S)" >>./$bacdir/readmi.txt
+}
 #----------------Запись дамп диска в файл--sda.dump----------------
-damp_=(sfdisk -d /dev/$namedisk >./$bacdir/sda.dump)
+damp_() { 
+sfdisk -d /dev/$namedisk >./$bacdir/sda.dump
+}
 #------------------------разные варианты сжатия--------------------
-nogz=(partclone.vfat -c -N -s /dev/sda1 -o ./$bacdir/sda1.pcl;partclone.btrfs -c -N -s /dev/sda2 -o ./$bacdir/sda2.pcl)
-gz0=(partclone.vfat -c -N -s /dev/$boot | gzip -c0>./$bacdir/sda1.pcl.gz;partclone.btrfs -c -N -s /dev/$root | gzip -c0>./$bacdir/sda2.pcl.gz)
-gz6=(partclone.vfat -c -N -s /dev/$boot | gzip -c6>./$bacdir/sda1.pcl.gz;partclone.btrfs -c -N -s /dev/$root | gzip -c6>./$bacdir/sda2.pcl.gz)
-gz9=(partclone.vfat -c -N -s /dev/sda1 | gzip -c9>./$bacdir/sda1.pcl.gz;partclone.btrfs -c -N -s /dev/sda2 | gzip -c9>./$bacdir/sda2.pcl.gz)
+nogz() {
+partclone.vfat -c -N -s /dev/sda1 -o ./$bacdir/sda1.pcl
+partclone.btrfs -c -N -s /dev/sda2 -o ./$bacdir/sda2.pcl
+}
+gz0() {
+partclone.vfat -c -N -s /dev/$boot | gzip -c0>./$bacdir/sda1.pcl.gz
+partclone.btrfs -c -N -s /dev/$root | gzip -c0>./$bacdir/sda2.pcl.gz
+}
+gz6() {
+partclone.vfat -c -N -s /dev/$boot | gzip -c6>./$bacdir/sda1.pcl.gz
+partclone.btrfs -c -N -s /dev/$root | gzip -c6>./$bacdir/sda2.pcl.gz
+}
+gz9() {
+partclone.vfat -c -N -s /dev/sda1 | gzip -c9>./$bacdir/sda1.pcl.gz
+partclone.btrfs -c -N -s /dev/sda2 | gzip -c9>./$bacdir/sda2.pcl.gz
+}
 #------------------------------------------------------------------
 
 echo '
+
+
                      Выберите степень сжатия архив
         Чем больше сжатие тем дольше создаётся.
         Без зжатия максимальная скорость создания архива.
         Среднее сжатие оптимальные параметры по скорости и степени сжатия.
+
 '
 PS3="Выберите тип соединения 1 или 2 если 3 то выход :"
 select choice in "Без зжатия" "минимальное сжатие" "Среднее сжатие" "Максимальное" "Не создавать копии диска"; do
