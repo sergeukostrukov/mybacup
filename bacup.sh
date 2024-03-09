@@ -64,7 +64,7 @@ pclgz() {
     damp_
     echo "$l" >./$bacdir/readme.txt
     echo "$(date +%F-%H%M-%S)" >>./$bacdir/readme.txt
-    echo "Максимальное сжатие архива --best" >>./$bacdir/readme.txt
+    echo " Cжатие архива $c " >>./$bacdir/readme.txt
     partclone.vfat -c -N -s /dev/$boot | gzip -c $c>./$bacdir/sda1.pcl.gz
     partclone.btrfs -c -N -s /dev/$root | gzip -c $c>./$bacdir/sda2.pcl.gz
     echo "$(date +%F-%H%M-%S)" >>./$bacdir/readme.txt
@@ -89,8 +89,9 @@ case $REPLY in
     *) echo "Неправильный выбор !";;
 esac
 done
-
-pclgz
+###########################################################################
+#-------------------Сам процесс Becap--------------------------------------
+time -E -a -o ./$bacdir/readme.txt pclgz
 ###########################################################################
 #-Секция создания скрипта over.sh для восстановления из бекапа на физический диск
 echo "#!/bin/bash">./$bacdir/over.sh
