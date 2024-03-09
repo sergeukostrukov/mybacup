@@ -55,35 +55,44 @@ echo "
 "
 read l
 ###################################################################
-#-----------Создание readmi.txt и запись в него время начала-------
-readmi() {
-    echo "$l" >./$bacdir/readmi.txt
-    echo "$(date +%F-%H%M-%S)" >>./$bacdir/readmi.txt
-}
 #----------------Запись дамп диска в файл--sda.dump----------------
 damp_() { 
     sfdisk -d /dev/$namedisk >./$bacdir/sda.dump
 }
 #------------------------разные варианты сжатия--------------------
 nogz() {
+    echo "$l" >./$bacdir/readme.txt
+    echo "$(date +%F-%H%M-%S)" >>./$bacdir/readme.txt
+    echo "Без сжатия" >>./$bacdir/readme.txt
     partclone.vfat -c -N -s /dev/$boot -o ./$bacdir/sda1.pcl
     partclone.btrfs -c -N -s /dev/$root -o ./$bacdir/sda2.pcl
+    echo "$(date +%F-%H%M-%S)" >>./$bacdir/readme.txt
 }
 gz0() {
-
+    echo "$l" >./$bacdir/readme.txt
+    echo "$(date +%F-%H%M-%S)" >>./$bacdir/readme.txt
+    echo "Минимальное сжатие --fast" >>./$bacdir/readme.txt
     partclone.vfat -c -N -s /dev/$boot | gzip -c --fast>./$bacdir/sda1.pcl.gz
     partclone.btrfs -c -N -s /dev/$root | gzip -c --fast>./$bacdir/sda2.pcl.gz
+    echo "$(date +%F-%H%M-%S)" >>./$bacdir/readme.txt
 }
 gz6() {
+    echo "$l" >./$bacdir/readme.txt
+    echo "$(date +%F-%H%M-%S)" >>./$bacdir/readme.txt
+    echo "Среднее сжатие -6 (оптимальное)" >>./$bacdir/readme.txt
     partclone.vfat -c -N -s /dev/$boot | gzip -c -6>./$bacdir/sda1.pcl.gz
     partclone.btrfs -c -N -s /dev/$root | gzip -c -6>./$bacdir/sda2.pcl.gz
+    echo "$(date +%F-%H%M-%S)" >>./$bacdir/readme.txt
 }
 gz9() {
+    echo "$l" >./$bacdir/readme.txt
+    echo "$(date +%F-%H%M-%S)" >>./$bacdir/readme.txt
+    echo "Максимальное сжатие архива --best" >>./$bacdir/readme.txt
     partclone.vfat -c -N -s /dev/$boot | gzip -c --best>./$bacdir/sda1.pcl.gz
     partclone.btrfs -c -N -s /dev/$root | gzip -c --best>./$bacdir/sda2.pcl.gz
+    echo "$(date +%F-%H%M-%S)" >>./$bacdir/readme.txt
 }
 #------------------------------------------------------------------
-
 echo '
 
 
@@ -96,16 +105,14 @@ echo '
 PS3="Выберите степень сжатия. Если 5 то выход :"
 select choice in "Без сжатия" "минимальное сжатие" "Среднее сжатие" "Максимальное сжатие" "ВЫХОД без создания becap"; do
 case $REPLY in
-    1) readmi;damp_;nogz;break;;
-    2) readmi;damp_;gz0;break;;
-    3) readmi;damp_;gz6;break;;
-    4) readmi;damp_;gz9;break;;
+    1) damp_;nogz;break;;
+    2) damp_;gz0;break;;
+    3) damp_;gz6;break;;
+    4) damp_;gz9;break;;
     5) exit;;
     *) echo "Неправильный выбор !";;
 esac
 done
-
-
 ###########################################################################
 #-Секция создания скрипта over.sh для восстановления из бекапа на физический диск
 echo "#!/bin/bash">./$bacdir/over.sh
@@ -130,4 +137,4 @@ echo "reboot">>./$bacdir/over.sh
 chmod +x ./$bacdir/over.sh
 ###################################################################
 ###################################################################
-echo "$(date +%F-%H%M-%S)" >>./$bacdir/readmi.txt
+
