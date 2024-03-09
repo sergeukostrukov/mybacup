@@ -71,16 +71,16 @@ nogz() {
 }
 gz0() {
 
-    partclone.vfat -c -N -s /dev/$boot | gzip -c0>./$bacdir/sda1.pcl.gz
-    partclone.btrfs -c -N -s /dev/$root | gzip -c0>./$bacdir/sda2.pcl.gz
+    partclone.vfat -c -N -s /dev/$boot | gzip -c --fast>./$bacdir/sda1.pcl.gz
+    partclone.btrfs -c -N -s /dev/$root | gzip -c --fast>./$bacdir/sda2.pcl.gz
 }
 gz6() {
-    partclone.vfat -c -N -s /dev/$boot | gzip -c6>./$bacdir/sda1.pcl.gz
-    partclone.btrfs -c -N -s /dev/$root | gzip -c6>./$bacdir/sda2.pcl.gz
+    partclone.vfat -c -N -s /dev/$boot | gzip -c -6>./$bacdir/sda1.pcl.gz
+    partclone.btrfs -c -N -s /dev/$root | gzip -c -6>./$bacdir/sda2.pcl.gz
 }
 gz9() {
-    partclone.vfat -c -N -s /dev/$boot | gzip -c9>./$bacdir/sda1.pcl.gz
-    partclone.btrfs -c -N -s /dev/$root | gzip -c9>./$bacdir/sda2.pcl.gz
+    partclone.vfat -c -N -s /dev/$boot | gzip -c --best>./$bacdir/sda1.pcl.gz
+    partclone.btrfs -c -N -s /dev/$root | gzip -c --best>./$bacdir/sda2.pcl.gz
 }
 #------------------------------------------------------------------
 
