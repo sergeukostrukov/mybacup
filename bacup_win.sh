@@ -4,8 +4,8 @@ sed -i s/'#en_US.UTF-8'/'en_US.UTF-8'/g /etc/locale.gen
 sed -i s/'#ru_RU.UTF-8'/'ru_RU.UTF-8'/g /etc/locale.gen
 echo 'LANG=ru_RU.UTF-8' > /etc/locale.conf
 echo 'KEYMAP=ru' > /etc/vconsole.conf
-echo 'FONT=cyr-sun16' >> /etc/vconsole.conf
-setfont cyr-sun16
+echo 'FONT=ter-v32b' >> /etc/vconsole.conf
+setfont ter-v32b
 locale-gen >/dev/null 2>&1; RETVAL=$?
 localectl set-x11-keymap --no-convert us,ru pc105 "" grp:alt_shift_toggle
 #####---------------диалог назначения namedisk-----------------------------
