@@ -130,7 +130,7 @@ select_partitions() {
         part_info+=("$num|$part|$fstype")
         echo "  [$num] $part  ($fstype)"
         ((num++))
-    done < <(lsblk -n -o NAME,FSTYPE "/dev/$namedisk" 2>/dev/null | awk '/p[0-9]/ || ($1 ~ /[a-z][0-9]$/ && $1 !~ /^nvme/ && $1 !~ /^vd/ && $1 !~ /^sd$/)' | sed 's/^[-|`]-//')
+    done < <(lsblk --raw -o NAME,FSTYPE "/dev/$namedisk" 2>/dev/null | awk '/p[0-9]/ || ($1 ~ /[a-z][0-9]$/ && $1 !~ /^nvme/ && $1 !~ /^vd/ && $1 !~ /^sd$/)')
 
     if [[ ${#partitions[@]} -eq 0 ]]; then
         echo "Ошибка: разделы не найдены"
@@ -247,14 +247,14 @@ preview_backup() {
 
     clear
     echo "=========================================="
-    echo "  ПРЕДПРОСМОТР КОПИРОВАНИЯ"
+    echo " ПРЕДКПРОСМОТР КОПИРОВАНИЯ"
     echo "=========================================="
     echo ""
     echo " Диск:         $namedisk"
-    #echo " boot (исх):   [$boot]"
-    echo " boot :        /dev/$boot_part"
-    #echo " root (исх):   [$root]"
-    echo " root :        /dev/$root_part"
+#    echo " boot (исх):   [$boot]"
+    echo " boot:      /dev/$boot_part"
+#    echo " root (исх):   [$root]"
+    echo " root:      /dev/$root_part"
     echo " Сжатие:       $compression"
     echo " Директория:   $bacdir"
     echo ""
@@ -346,7 +346,6 @@ backup() {
 #===============================================================================
 
 main() {
-    clear
     setup_font
     show_time
     select_disk
