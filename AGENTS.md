@@ -1,248 +1,172 @@
-# Руководство для агентов по работе с репозиторием mybacup
+# Руководство для агентов — mybacup
 
-## Общая информация
+## О проекте
 
-**mybacup** - репозиторий с bash-скриптами для создания резервных копий (бекапов) дисков Linux/Windows систем. Скрипты используют утилиты `partclone`, `sfdisk`, `gzip` для создания сжатых архивов разделов дисков.
-
-## Структура проекта
+Репозиторий с bash-скриптами для резервного копирования дисков Linux/Windows систем. Скрипты используют `partclone`, `sfdisk`, `gzip`.
 
 ```
 .
-├── bacup.sh          # Основной скрипт для Linux систем (btrfs + vfat)
-├── bacup_win.sh      # Скрипт для Windows систем (ntfs + vfat)
-└── README.md         # Документация на русском языке
+├── liveBacup.sh   # Linux (btrfs + vfat)
+├── bacup_win.sh   # Windows (ntfs + vfat)
+├── README.md
+└── AGENTS.md
 ```
 
-## Команды сборки и тестирования
+---
 
-### Проверка синтаксиса bash-скриптов
+## Команды проверки
+
+### Синтаксис
 ```bash
-# Проверка основного скрипта
-bash -n bacup.sh
+# Один файл
+bash -n liveBacup.sh
 
-# Проверка скрипта для Windows
-bash -n bacup_win.sh
-
-# Проверка обоих скриптов
-for script in *.sh; do echo "Checking $script:"; bash -n "$script" && echo "✓ OK" || echo "✗ Error"; done
+# Все скрипты
+for s in *.sh; do bash -n "$s" && echo "OK: $s" || echo "ERROR: $s"; done
 ```
 
-### Статический анализ с ShellCheck
+### ShellCheck (статический анализ)
 ```bash
-# Установка ShellCheck (если не установлен)
-# sudo apt-get install shellcheck  # Debian/Ubuntu
-# sudo pacman -S shellcheck        # Arch
-# brew install shellcheck          # macOS
+# Полный анализ
+shellcheck -x liveBacup.sh
 
-# Анализ скриптов
-shellcheck bacup.sh
-shellcheck bacup_win.sh
+# Только ошибки
+shellcheck -S error liveBacup.sh
 
-# Анализ с подробным выводом
-shellcheck -x bacup.sh
+# Все скрипты (SC1090 игнорируется — sourced файлы)
+shellcheck -x -i SC1090 *.sh
 ```
 
-### Запуск скриптов (тестирование)
+### Трассировка выполнения
 ```bash
-# Тестовый запуск в безопасном режиме (без реальных операций)
-# Добавьте флаг -x для отладки
-bash -x bacup.sh
-
-# Проверка прав доступа
-chmod +x bacup.sh bacup_win.sh
-ls -la *.sh
+bash -x liveBacup.sh 2>&1 | tee debug.log
+time bash liveBacup.sh
 ```
+
+---
 
 ## Стиль кодирования
 
-### Общие правила
-1. **Язык**: Весь код и комментарии на русском языке
-2. **Интерпретатор**: Все скрипты начинаются с `#!/bin/bash`
-3. **Кодировка**: UTF-8
-4. **Переносимость**: Скрипты должны работать в стандартной среде bash
-
-### Форматирование
-1. **Отступы**: 4 пробела (не табы)
-2. **Длина строк**: Максимум 80 символов
-3. **Пустые строки**: Используйте для логического разделения блоков кода
-4. **Комментарии**: На русском, описывают назначение блоков кода
-
-Пример правильного форматирования:
-```bash
-#------Localizaciya------------------------------------------
-sed -i s/'#en_US.UTF-8'/'en_US.UTF-8'/g /etc/locale.gen
-sed -i s/'#ru_RU.UTF-8'/'ru_RU.UTF-8'/g /etc/locale.gen
-echo 'LANG=ru_RU.UTF-8' > /etc/locale.conf
-
-#---------------диалог назначения namedisk-----------------------------
-clear
-lsblk
-echo 'ВВЕДИТЕ ИМЯ КОПИРУЕМОГО ДИСКА'
-```
+### Основные правила
+| Параметр | Значение |
+|----------|----------|
+| Интерпретатор | `#!/bin/bash` |
+| Кодировка | UTF-8 |
+| Отступы | 4 пробела |
+| Макс. длина строки | 80 символов |
 
 ### Именование
-1. **Переменные**: snake_case, осмысленные имена на русском/английском
-   ```bash
-   namedisk="sda"
-   bacdir="backup_$(date +%F)"
-   boot_partition="${namedisk}1"
-   ```
-
-2. **Функции**: snake_case с описательным именем
-   ```bash
-   create_backup() {
-       # код функции
-   }
-   
-   calculate_time() {
-       # код функции
-   }
-   ```
-
-3. **Константы**: UPPER_CASE для важных констант
-   ```bash
-   readonly BACKUP_DIR="/backups"
-   readonly MAX_RETRIES=3
-   ```
-
-### Импорты и зависимости
-1. **Внешние команды**: Проверяйте наличие необходимых утилит
-   ```bash
-   # Проверка зависимостей
-   command -v partclone.vfat >/dev/null 2>&1 || {
-       echo "Ошибка: partclone не установлен"
-       exit 1
-   }
-   ```
-
-2. **Пути**: Используйте абсолютные пути для системных файлов
-   ```bash
-   # Правильно
-   sed -i s/'#en_US.UTF-8'/'en_US.UTF-8'/g /etc/locale.gen
-   
-   # Неправильно (может не сработать)
-   sed -i s/'#en_US.UTF-8'/'en_US.UTF-8'/g locale.gen
-   ```
-
-### Обработка ошибок
-1. **Проверка кодов возврата**: Всегда проверяйте результат выполнения команд
-   ```bash
-   mkdir "$bacdir" || {
-       echo "Ошибка создания директории $bacdir"
-       exit 1
-   }
-   ```
-
-2. **Обработка пользовательского ввода**: Валидация ввода
-   ```bash
-   read -p "Введите имя диска: " namedisk
-   if [[ ! "$namedisk" =~ ^[sv]d[a-z]$ ]]; then
-       echo "Некорректное имя диска"
-       exit 1
-   fi
-   ```
-
-3. **Отладка**: Используйте `set -e` для автоматического выхода при ошибках
-   ```bash
-   # В начале критических секций
-   set -e
-   # Код, который не должен падать
-   set +e
-   ```
-
-### Безопасность
-1. **Экранирование переменных**: Всегда заключайте переменные в двойные кавычки
-   ```bash
-   # Правильно
-   echo "$namedisk"
-   mkdir "$bacdir"
-   
-   # Неправильно (проблемы с пробелами)
-   echo $namedisk
-   mkdir $bacdir
-   ```
-
-2. **Проверка прав**: Убедитесь, что скрипт запущен с нужными правами
-   ```bash
-   # Проверка на root
-   if [[ $EUID -ne 0 ]]; then
-       echo "Этот скрипт должен запускаться от root"
-       exit 1
-   fi
-   ```
-
-## Особенности проекта
-
-### Специфичные команды
-1. **partclone**: Используется для клонирования разделов
-   - `partclone.vfat` - для FAT разделов (загрузочных)
-   - `partclone.btrfs` - для btrfs разделов (Linux)
-   - `partclone.ntfs` - для NTFS разделов (Windows)
-
-2. **sfdisk**: Для работы с таблицей разделов
-   - `sfdisk -d` - дамп таблицы разделов
-   - `sfdisk` - восстановление таблицы разделов
-
-3. **gzip**: Сжатие архивов
-   - `--fast` - минимальное сжатие
-   - `-6` - среднее сжатие (по умолчанию)
-   - `--best` - максимальное сжатие
-
-### Логика работы скриптов
-1. **bacup.sh**: Для Linux систем с разделами:
-   - `/dev/${disk}1` - vfat (boot)
-   - `/dev/${disk}2` - btrfs (root)
-
-2. **bacup_win.sh**: Для Windows систем с разделами:
-   - `/dev/${disk}1` - vfat (boot)
-   - `/dev/${disk}3` - ntfs (системный раздел)
-   - `/dev/${disk}4` - ntfs (пользовательские данные)
-
-### Создаваемые файлы
-Каждый бекап создаёт директорию с именем `[префикс][дата-время]` содержащую:
-- `sda.dump` - дамп таблицы разделов
-- `sda[номер].pcl.gz` - сжатые архивы разделов
-- `readme.txt` - информация о бекапе (метаданные)
-- `over.sh` - скрипт для восстановления
-
-## Рекомендации по разработке
-
-### Перед внесением изменений
-1. Протестируйте изменения в изолированной среде
-2. Проверьте синтаксис с `bash -n`
-3. Запустите ShellCheck для статического анализа
-4. Убедитесь, что скрипты работают с разными именами дисков (sda, vda, etc.)
-
-### При добавлении нового функционала
-1. Сохраняйте обратную совместимость
-2. Добавляйте проверки ввода
-3. Обновляйте документацию в README.md
-4. Тестируйте на разных дистрибутивах Linux
-
-### Коммиты
-1. Сообщения коммитов на русском языке
-2. Описывайте изменения кратко и понятно
-3. Ссылайтесь на issue/проблемы если есть
-
-## Полезные команды для отладки
-
 ```bash
-# Трассировка выполнения
-bash -x bacup.sh
+# Переменные — snake_case
+namedisk="sda"
+bacdir="backup_$(date +%F)"
 
-# Проверка переменных во время выполнения
-set -o xtrace
+# Константы — UPPER_CASE + readonly
+readonly BACKUP_DIR="/backups"
+readonly MAX_RETRIES=3
 
-# Логирование в файл
-exec > >(tee -a debug.log) 2>&1
-
-# Измерение времени выполнения
-time bash bacup.sh
+# Функции — snake_case
+dump_partition_table() { ... }
+backup_partitions() { ... }
 ```
 
-## Контакты и поддержка
+### Кавычки
+```bash
+# Двойные — для переменных
+echo "$namedisk"
+echo "$bacdir/sda.dump"
 
-- Документация: README.md (на русском)
-- Язык: Русский (код и документация)
-- Тип проекта: Bash-скрипты для резервного копирования
-- Требования: Bash 4+, partclone, sfdisk, gzip
+# Одинарные — литералы
+echo 'Enter value:'
+
+# Всегда с кавычками!
+```
+
+### Обработка ошибок
+```bash
+# Критические команды
+mkdir "$bacdir" || exit 1
+
+# Валидация ввода
+if [[ ! "$namedisk" =~ ^[sv]d[a-z]$ ]]; then
+    echo "Error: invalid disk name. Example: sda, vda"
+    exit 1
+fi
+
+# Root check
+if [[ $EUID -ne 0 ]]; then
+    echo "Error: root privileges required"
+    exit 1
+fi
+
+# Dependency check
+check_dependency() {
+    local cmd="$1"
+    local package="${2:-$cmd}"
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+        echo "Error: $cmd not found. Install: pacman -S $package"
+        exit 1
+    fi
+}
+check_dependency "partclone.vfat" "partclone"
+check_dependency "sfdisk" "util-linux"
+```
+
+---
+
+## Зависимости
+
+| Утилита | Пакет | Назначение |
+|---------|-------|------------|
+| `partclone.vfat/btrfs/ntfs` | partclone | Клонирование разделов |
+| `sfdisk` | util-linux | Таблица разделов |
+| `gzip` / `zcat` | gzip | Сжатие/распаковка |
+
+---
+
+## Структура бекапа
+
+```
+backup_2024-01-15-143022/
+├── sda.dump       # Partition table (sfdisk)
+├── sda1.pcl.gz    # boot (vfat)
+├── sda2.pcl.gz    # root (btrfs/ntfs)
+├── readme.txt     # Metadata
+└── over.sh        # Restore script
+```
+
+### Partition schemes
+```
+liveBacup.sh:  /dev/${disk}1 → vfat,  /dev/${disk}2 → btrfs
+bacup_win.sh:  /dev/${disk}1 → vfat,  /dev/${disk}3 → ntfs,  /dev/${disk}4 → ntfs
+```
+
+---
+
+## Режим запуска
+
+Скрипты предназначены для **LiveUSB Arch Linux**:
+1. Загрузитесь с установочной флешки
+2. Не монтируйте целевой диск
+3. Запускайте из текущей директории
+4. **Keyboard layout: English only** (setfont обеспечивает отображение кириллицы)
+
+---
+
+## Чеклист перед коммитом
+
+- [ ] `bash -n *.sh` — без ошибок синтаксиса
+- [ ] `shellcheck -x *.sh` — без критических предупреждений
+- [ ] Все комментарии и сообщения на русском
+- [ ] Все переменные в кавычках
+
+---
+
+## Git
+
+```bash
+git status
+git diff
+git commit -m "Краткое описание"
+git log --oneline -10
+```

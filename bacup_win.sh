@@ -1,81 +1,79 @@
 #!/bin/bash
-#------Localizaciya------------------------------------------
-sed -i s/'#en_US.UTF-8'/'en_US.UTF-8'/g /etc/locale.gen
-sed -i s/'#ru_RU.UTF-8'/'ru_RU.UTF-8'/g /etc/locale.gen
-echo 'LANG=ru_RU.UTF-8' > /etc/locale.conf
-echo 'KEYMAP=ru' > /etc/vconsole.conf
-echo 'FONT=ter-v32b' >> /etc/vconsole.conf
-setfont ter-v32b
-locale-gen >/dev/null 2>&1; RETVAL=$?
-localectl set-x11-keymap --no-convert us,ru pc105 "" grp:alt_shift_toggle
-#####---------------диалог назначения namedisk-----------------------------
+#===============================================================================
+# Скрипт резервного копирования диска для Windows (LiveUSB)
+# Запуск с установочного носителя Arch Linux
+# Не монтируйте целевой диск к системе
+#===============================================================================
+# ПРИМЕЧАНИЕ: Раскладка клавиатуры остаётся EN (US).
+#       Сообщения на русском (отображаются через шрифт ter-v32b).
+#===============================================================================
+
+#------Настройка шрифта (для отображения кириллицы)--------------------
+if command -v setfont >/dev/null 2>&1; then
+    setfont ter-v32b 2>/dev/null || setfont cybercafe-narrow 2>/dev/null || true
+fi
+
+#####---------------Выбор исходного диска-----------------------------
 clear
 lsblk
-#fdisk -l
-echo '                                 ВВЕДИТЕ ИМЯ КОПИРУЕМОГО ДИСКА  "например: sda vda ....:)"'
-read -p "
-                                                              -> Введите значение : " namedisk
+echo ' Введите имя копируемого диска (например: sda, vda, sdb):'
+read -p " -> " namedisk
 
-boot=$namedisk'1'
-#root2=$namedisk'2'
-root3=$namedisk'3'
-root4=$namedisk'4'
-echo '                Вы выьрали диск = '$namedisk
-echo '                           boot = '$boot
-#echo '                           root = '$root2
-echo '                           root = '$root3
-echo '                           root = '$root4
+boot="${namedisk}1"
+root3="${namedisk}3"
+root4="${namedisk}4"
+echo " Выбран диск: $namedisk"
+echo " boot=$boot"
+echo " root3=$root3"
+echo " root4=$root4"
 sleep 3
-PS3="Выберите 1 ПРОДОЛЖИТЬ если 2 то ВЫХОД :"
-select choice in "ПРОДОЛЖИТЬ" "Exit"; do
+
+PS3="Выбор: 1=ПРОДОЛЖИТЬ, 2=ВЫХОД:"
+select choice in "ПРОДОЛЖИТЬ" "ВЫХОД"; do
 case $REPLY in
     1) break;;
-    2) echo "see you next time";exit;;
-    *) echo "Неправильный выбор !";;
+    2) echo "Выход..."; exit;;
+    *) echo "Неверный выбор!";;
 esac
 done
 #################################################################
 t=$(date +%F-%H%M-%S)
-bacdir=win$t
-mkdir $bacdir
+bacdir="win${t}"
+mkdir "$bacdir"
 clear
-echo "Напечатайте примечания о копии"
+echo "Введите описание для этого бекапа:"
 read l
-echo "$l" >./$bacdir/readmi.txt
-echo "$(date +%F-%H%M-%S)" >>./$bacdir/readmi.txt
-sfdisk -d /dev/$namedisk >./$bacdir/sda.dump
-partclone.vfat -c -N -s /dev/$boot | gzip -c>./$bacdir/sda1.pcl.gz
-#partclone.ntfs -c -N -s /dev/$root2 | gzip -c>./$bacdir/sda2.pcl.gz
-partclone.ntfs -c -N -s /dev/$root3 | gzip -c>./$bacdir/sda3.pcl.gz
-partclone.ntfs -c -N -s /dev/$root4 | gzip -c>./$bacdir/sda4.pcl.gz
+echo "$l" >"./$bacdir/readmi.txt"
+echo "$(date +%F-%H%M-%S)" >>"./$bacdir/readmi.txt"
+sfdisk -d "/dev/$namedisk" >"./$bacdir/sda.dump"
+partclone.vfat -c -N -s "/dev/$boot" | gzip -c >"./$bacdir/sda1.pcl.gz"
+partclone.ntfs -c -N -s "/dev/$root3" | gzip -c >"./$bacdir/sda3.pcl.gz"
+partclone.ntfs -c -N -s "/dev/$root4" | gzip -c >"./$bacdir/sda4.pcl.gz"
 ###################################################################
-echo "#!/bin/bash">./$bacdir/over.sh
-#####---------------диалог назначения namedisk-----------------------------
-echo "clear">>./$bacdir/over.sh
-echo "lsblk">>./$bacdir/over.sh
-echo "#fdisk -l">>./$bacdir/over.sh
-echo "echo '                                SELECT THE DISK TO RESTORE : sda vda ....:)'">>./$bacdir/over.sh
-echo 'read -p "                  -> Entering a value : " namedisk'>>./$bacdir/over.sh
-echo 'boot=$namedisk"1"'>>./$bacdir/over.sh
-#echo 'root2=$namedisk"2"'>>./$bacdir/over.sh
-echo 'root3=$namedisk"3"'>>./$bacdir/over.sh
-echo 'root4=$namedisk"4"'>>./$bacdir/over.sh
-
-echo 'echo "                Вы выьрали диск = "$namedisk'>>./$bacdir/over.sh
-echo 'echo "                           boot = "$boot'>>./$bacdir/over.sh
-#echo 'echo "                           root = "$root2'>>./$bacdir/over.sh
-echo 'echo "                           root = "$root3'>>./$bacdir/over.sh
-echo 'echo "                           root = "$root4'>>./$bacdir/over.sh
-echo "sleep 3">>./$bacdir/over.sh
-echo "#################################################################">>./$bacdir/over.sh
-echo 'sfdisk /dev/$namedisk < sda.dump'>>./$bacdir/over.sh
-echo 'zcat ./sda1.pcl.gz | partclone.vfat -r -N -o /dev/$boot'>>./$bacdir/over.sh
-#echo 'zcat ./sda2.pcl.gz | partclone.btrfs -r -N -o /dev/$root2'>>./$bacdir/over.sh
-echo 'zcat ./sda3.pcl.gz | partclone.btrfs -r -N -o /dev/$root3'>>./$bacdir/over.sh
-echo 'zcat ./sda4.pcl.gz | partclone.btrfs -r -N -o /dev/$root4'>>./$bacdir/over.sh
-echo "clear">>./$bacdir/over.sh
-echo "reboot">>./$bacdir/over.sh
-chmod +x ./$bacdir/over.sh
+#------Создание скрипта восстановления over.sh-------------------------------
+cat > "./$bacdir/over.sh" <<'OVER_EOF'
+#!/bin/bash
+clear
+lsblk
+echo ' Выберите целевой диск для восстановления (например: sda, vda, sdb):'
+read -p " -> " namedisk
+boot="${namedisk}1"
+root3="${namedisk}3"
+root4="${namedisk}4"
+echo " Выбран диск: $namedisk"
+echo " boot=$boot"
+echo " root3=$root3"
+echo " root4=$root4"
+sleep 3
+#################################################################
+sfdisk /dev/$namedisk < sda.dump
+zcat ./sda1.pcl.gz | partclone.vfat -r -N -o /dev/$boot
+zcat ./sda3.pcl.gz | partclone.ntfs -r -N -o /dev/$root3
+zcat ./sda4.pcl.gz | partclone.ntfs -r -N -o /dev/$root4
+clear
+reboot
+OVER_EOF
+chmod +x "./$bacdir/over.sh"
 ###################################################################
 ###################################################################
-echo "$(date +%F-%H%M-%S)" >>./$bacdir/readmi.txt
+echo "$(date +%F-%H%M-%S)" >>"./$bacdir/readmi.txt"
