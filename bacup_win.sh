@@ -18,6 +18,44 @@ root4=""
 bacdir=""
 compression=""
 
+#------Проверка зависимостей---------------------------------
+check_dependencies() {
+    local missing_deps=()
+    
+    # Проверяем необходимые команды
+    for cmd in sfdisk gzip lsblk; do
+        if ! command -v "$cmd" >/dev/null 2>&1; then
+            missing_deps+=("$cmd")
+        fi
+    done
+    
+    # Проверяем команды partclone
+    if ! command -v partclone.vfat >/dev/null 2>&1; then
+        missing_deps+=("partclone.vfat")
+    fi
+    
+    if ! command -v partclone.ntfs >/dev/null 2>&1; then
+        missing_deps+=("partclone.ntfs")
+    fi
+    
+    if [[ ${#missing_deps[@]} -gt 0 ]]; then
+        echo "ОШИБКА: Не найдены необходимые команды:"
+        for dep in "${missing_deps[@]}"; do
+            echo "  - $dep"
+        done
+        echo ""
+        echo "Установите зависимости командой:"
+        echo "  pacman -S partclone util-linux gzip"
+        echo ""
+        echo "Или проверьте установку пакетов:"
+        echo "  pacman -Q partclone util-linux gzip"
+        exit 1
+    fi
+    
+    echo "Все зависимости проверены успешно"
+    echo ""
+}
+
 #===============================================================================
 # Функции
 #===============================================================================
@@ -69,21 +107,27 @@ show_time() {
 select_disk() {
     clear
     echo "=========================================="
-    echo " ВЫБОР ДИСКА"
+    echo " ВЫБОР ДИСКА ДЛЯ КОПИРОВАНИЯ (WINDOWS)"
     echo "=========================================="
     echo ""
 
-    echo "Доступные диски:"
+    echo "ВСЕ ДОСТУПНЫЕ УСТРОЙСТВА И РАЗДЕЛЫ:"
+    echo "===================================="
+    lsblk -o NAME,SIZE,FSTYPE,MOUNTPOINT,LABEL,MODEL 2>/dev/null
+    echo ""
+
+    echo "Доступные диски для копирования:"
     local disks=()
     local disk_info=()
     while IFS= read -r line; do
-        local name size
+        local name size model
         name=$(echo "$line" | awk '{print $1}')
         size=$(echo "$line" | awk '{print $2}')
+        model=$(echo "$line" | awk '{for(i=3;i<=NF;i++) printf "%s ", $i; print ""}' | sed 's/ $//')
         disks+=("$name")
-        disk_info+=("$name|$size")
-        echo "  [$(( ${#disks[@]} ))] $name  ($size)"
-    done < <(lsblk -nd -o NAME,SIZE 2>/dev/null | grep -E '^sd|vd|nvme')
+        disk_info+=("$name|$size|$model")
+        echo "  [$(( ${#disks[@]} ))] $name  ($size)  $model"
+    done < <(lsblk -nd -o NAME,SIZE,MODEL 2>/dev/null | grep -E '^sd|vd|nvme')
 
     if [[ ${#disks[@]} -eq 0 ]]; then
         echo "Ошибка: диски не найдены"
@@ -91,7 +135,7 @@ select_disk() {
     fi
 
     echo ""
-    PS3="Выберите номер диска: "
+    PS3="Выберите номер диска для копирования: "
     select choice in "${disks[@]}" "ВЫХОД"; do
         if [[ "$choice" == "ВЫХОД" ]]; then
             echo "Выход..."
@@ -104,8 +148,15 @@ select_disk() {
         echo "Неверный выбор!"
     done
 
+    echo ""
     echo "Выбран диск: $namedisk"
-    sleep 1
+    echo ""
+    echo "ПОДРОБНАЯ ИНФОРМАЦИЯ О ВЫБРАННОМ ДИСКЕ:"
+    echo "======================================"
+    lsblk -o NAME,SIZE,FSTYPE,MOUNTPOINT,LABEL "/dev/$namedisk" 2>/dev/null
+    echo ""
+    
+    sleep 2
 }
 
 select_partitions() {
@@ -330,7 +381,34 @@ echo " ntfs (система)=$root3"
 echo " ntfs (данные)=$root4"
 sleep 3
 #################################################################
-sfdisk /dev/$namedisk < sda.dump
+# Создаем временный файл с исправленными путями к диску и разделам
+temp_dump=$(mktemp)
+
+# Определяем старое имя диска из файла dump
+old_disk=$(grep '^device:' sda.dump | cut -d'/' -f3)
+
+# Определяем, был ли исходный диск NVMe (имеет префикс p в именах разделов)
+old_is_nvme=$(grep -q "^/dev/${old_disk}p" sda.dump && echo "yes" || echo "no")
+
+# Определяем префикс для нового диска
+new_prefix=""
+if [[ "$namedisk" =~ ^nvme ]]; then
+    new_prefix="p"
+fi
+
+# Определяем префикс для старого диска
+old_prefix=""
+if [[ "$old_is_nvme" == "yes" ]]; then
+    old_prefix="p"
+fi
+
+# Заменяем device: и все пути к разделам с учетом префиксов
+sed -e "s|^device:.*|device: /dev/$namedisk|" \
+    -e "s|/dev/${old_disk}${old_prefix}|/dev/$namedisk${new_prefix}|g" \
+    sda.dump > "$temp_dump"
+
+sfdisk /dev/$namedisk < "$temp_dump"
+rm -f "$temp_dump"
 zcat ./sda1.pcl.gz | partclone.vfat -r -N -o /dev/$boot
 zcat ./sda3.pcl.gz | partclone.ntfs -r -N -o /dev/$root3
 zcat ./sda4.pcl.gz | partclone.ntfs -r -N -o /dev/$root4
@@ -376,6 +454,8 @@ backup() {
 #===============================================================================
 
 main() {
+    clear
+    check_dependencies
     setup_font
     show_time
     select_disk

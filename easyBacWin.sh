@@ -1,8 +1,8 @@
 #!/bin/bash
 #===============================================================================
-# Скрипт резервного копирования диска для Arch Linux (LiveUSB)
+# Упрощенный скрипт резервного копирования диска для Windows (LiveUSB)
+# Автоматически определяет разделы: №1 boot (vfat), №3 системная NTFS
 # Запуск с установочного носителя Arch Linux
-# Не монтируйте целевой диск к системе
 #===============================================================================
 # ПРИМЕЧАНИЕ: Раскладка клавиатуры остаётся EN (US).
 #       Сообщения на русском (отображаются через шрифт ter-v32b).
@@ -13,7 +13,7 @@ set -euo pipefail
 #------Глобальные переменные---------------------------------
 namedisk=""
 boot=""
-root=""
+system=""
 bacdir=""
 compression=""
 
@@ -33,8 +33,8 @@ check_dependencies() {
         missing_deps+=("partclone.vfat")
     fi
     
-    if ! command -v partclone.btrfs >/dev/null 2>&1; then
-        missing_deps+=("partclone.btrfs")
+    if ! command -v partclone.ntfs >/dev/null 2>&1; then
+        missing_deps+=("partclone.ntfs")
     fi
     
     if [[ ${#missing_deps[@]} -gt 0 ]]; then
@@ -106,7 +106,7 @@ show_time() {
 select_disk() {
     clear
     echo "=========================================="
-    echo " ВЫБОР ДИСКА ДЛЯ КОПИРОВАНИЯ"
+    echo " ВЫБОР ДИСКА ДЛЯ КОПИРОВАНИЯ (WINDOWS)"
     echo "=========================================="
     echo ""
 
@@ -155,77 +155,67 @@ select_disk() {
     lsblk -o NAME,SIZE,FSTYPE,MOUNTPOINT,LABEL "/dev/$namedisk" 2>/dev/null
     echo ""
     
-    sleep 2
-}
-
-select_partitions() {
-    clear
-    echo "=========================================="
-    echo " РАЗДЕЛЫ ДИСКА: $namedisk"
-    echo "=========================================="
-    echo ""
-    lsblk -o NAME,SIZE,FSTYPE,MOUNTPOINT "/dev/$namedisk" 2>/dev/null
-    echo ""
-
-    echo "Доступные разделы:"
-    local partitions=()
-    local part_info=()
-    local num=1
-    while IFS= read -r line; do
-        [[ -z "$line" ]] && continue
-        local part fstype
-        part=$(echo "$line" | awk '{print $1}')
-        fstype=$(echo "$line" | awk '{print $2}')
-        [[ -n "$part" ]] || continue
-        partitions+=("$part:$fstype")
-        part_info+=("$num|$part|$fstype")
-        echo "  [$num] $part  ($fstype)"
-        ((num++))
-    done < <(lsblk --raw -o NAME,FSTYPE "/dev/$namedisk" 2>/dev/null | awk '/p[0-9]/ || ($1 ~ /[a-z][0-9]$/ && $1 !~ /^nvme/ && $1 !~ /^vd/ && $1 !~ /^sd$/)')
-
-    if [[ ${#partitions[@]} -eq 0 ]]; then
-        echo "Ошибка: разделы не найдены"
+    # Определяем префикс для разделов
+    local partition_prefix=""
+    if [[ "$namedisk" =~ ^nvme ]]; then
+        partition_prefix="p"
+    fi
+    
+    # Автоматически определяем разделы (Windows схема с 2 разделами)
+    boot="${namedisk}${partition_prefix}1"
+    system="${namedisk}${partition_prefix}2"
+    
+    echo "Разделы определены автоматически (Windows схема с 2 разделами):"
+    echo "  boot (vfat):    $boot"
+    echo "  system (ntfs):  $system"
+    
+    # Проверяем существование разделов
+    if [[ ! -b "/dev/$boot" ]]; then
+        echo "Ошибка: раздел /dev/$boot не найден"
         exit 1
     fi
-
+    
+    if [[ ! -b "/dev/$system" ]]; then
+        echo "Ошибка: раздел /dev/$system не найден"
+        exit 1
+    fi
+    
+    # Проверяем тип файловой системы разделов
     echo ""
-    PS3="Выберите номер boot-раздела: "
-    select choice in "${partitions[@]}" "ВЫХОД"; do
-        if [[ "$choice" == "ВЫХОД" ]]; then
-            echo "Выход..."
-            exit 0
-        fi
-        if [[ -n "$choice" ]]; then
-            boot="$choice"
-            break
-        fi
-        echo "Неверный выбор!"
-    done
-
-    echo ""
-    PS3="Выберите номер root-раздела: "
-    select choice in "${partitions[@]}" "ВЫХОД"; do
-        if [[ "$choice" == "ВЫХОД" ]]; then
-            echo "Выход..."
-            exit 0
-        fi
-        if [[ -n "$choice" ]]; then
-            root="$choice"
-            break
-        fi
-        echo "Неверный выбор!"
-    done
+    echo "Проверка типов файловых систем:"
+    local boot_fstype system_fstype
+    boot_fstype=$(lsblk -no FSTYPE "/dev/$boot" 2>/dev/null || echo "")
+    system_fstype=$(lsblk -no FSTYPE "/dev/$system" 2>/dev/null || echo "")
+    
+    echo "  $boot: $boot_fstype"
+    echo "  $system: $system_fstype"
+    
+    if [[ "$boot_fstype" != "vfat" ]] && [[ "$boot_fstype" != "fat32" ]]; then
+        echo "Предупреждение: boot раздел имеет тип '$boot_fstype', ожидается vfat/fat32"
+    fi
+    
+    if [[ "$system_fstype" != "ntfs" ]]; then
+        echo "Предупреждение: system раздел имеет тип '$system_fstype', ожидается ntfs"
+    fi
+    
+    echo "Разделы проверены и готовы к копированию"
+    
+    sleep 2
 }
 
 confirm_selection() {
     clear
     echo "=========================================="
-    echo " ПОДТВЕРЖДЕНИЕ ВЫБОРА"
+    echo " ПОДТВЕРЖДЕНИЕ ВЫБОРА (WINDOWS)"
     echo "=========================================="
     echo ""
     echo " Диск:      $namedisk"
     echo " boot:      $boot"
-    echo " root:      $root"
+    echo " system:    $system"
+    echo ""
+    echo " Тип диска: $(if [[ "$namedisk" =~ ^nvme ]]; then echo "NVMe"; else echo "SATA/IDE"; fi)"
+    echo ""
+    echo " ПРОВЕРЬТЕ ПРАВИЛЬНОСТЬ ВЫБОРА!"
     echo ""
 
     PS3="Подтвердить?: "
@@ -234,7 +224,6 @@ confirm_selection() {
             1) break;;
             2)
                 select_disk
-                select_partitions
                 confirm_selection
                 return
                 ;;
@@ -292,22 +281,23 @@ dump_partition_table() {
 }
 
 preview_backup() {
-    local boot_part root_part
-    boot_part="${boot%%:*}"
-    root_part="${root%%:*}"
-
     clear
     echo "=========================================="
-    echo " ПРЕДПРОСМОТР КОПИРОВАНИЯ"
+    echo " ПРЕДПРОСМОТР КОПИРОВАНИЯ (WINDOWS)"
     echo "=========================================="
     echo ""
     echo " Диск:         $namedisk"
-#    echo " boot (исх):   [$boot]"
-    echo " boot:      /dev/$boot_part"
-#    echo " root (исх):   [$root]"
-    echo " root:      /dev/$root_part"
+    echo " boot:         /dev/$boot"
+    echo " system:       /dev/$system"
     echo " Сжатие:       $compression"
     echo " Директория:   $bacdir"
+    echo ""
+    echo " Файлы бекапа:"
+    echo "  $bacdir/sda.dump"
+    echo "  $bacdir/sda1.pcl.gz"
+    echo "  $bacdir/sda2.pcl.gz"
+    echo "  $bacdir/readme.txt"
+    echo "  $bacdir/over.sh"
     echo ""
 
     PS3="Начать копирование?: "
@@ -321,19 +311,13 @@ preview_backup() {
 }
 
 backup_partitions() {
-    local boot_part root_part
-    boot_part="${boot%%:*}"
-    boot_part="${boot_part//[^a-zA-Z0-9]/}"
-    root_part="${root%%:*}"
-    root_part="${root_part//[^a-zA-Z0-9]/}"
-
     echo " Сжатие: $compression" >>"./$bacdir/readme.txt"
 
-    echo " Копирование boot-раздела ($boot_part)..."
-    partclone.vfat -c -N -s "/dev/$boot_part" | gzip -c $compression >"./$bacdir/sda1.pcl.gz"
+    echo " Копирование boot-раздела ($boot)..."
+    partclone.vfat -c -N -s "/dev/$boot" | gzip -c $compression >"./$bacdir/sda1.pcl.gz"
 
-    echo " Копирование root-раздела ($root_part)..."
-    partclone.btrfs -c -N -s "/dev/$root_part" | gzip -c $compression >"./$bacdir/sda2.pcl.gz"
+    echo " Копирование system-раздела ($system)..."
+    partclone.ntfs -c -N -s "/dev/$system" | gzip -c $compression >"./$bacdir/sda2.pcl.gz"
 
     echo "$(date +%F-%H%M-%S)" >>"./$bacdir/readme.txt"
 }
@@ -343,13 +327,24 @@ create_restore_script() {
 #!/bin/bash
 clear
 lsblk
-echo ' Выберите целевой диск для восстановления (например: sda, vda, sdb):'
+echo ' Выберите целевой диск для восстановления (например: sda, vda, nvme0n1):'
 read -p " -> " namedisk
-boot="${namedisk}1"
-root="${namedisk}2"
+
+# Определяем префикс для разделов
+partition_prefix=""
+if [[ "$namedisk" =~ ^nvme ]]; then
+    partition_prefix="p"
+fi
+
+boot="${namedisk}${partition_prefix}1"
+system="${namedisk}${partition_prefix}2"
+
 echo " Выбран диск: $namedisk"
 echo " boot=$boot"
-echo " root=$root"
+echo " system=$system"
+echo ""
+echo " Тип диска: $(if [[ "$namedisk" =~ ^nvme ]]; then echo "NVMe"; else echo "SATA/IDE"; fi)"
+echo " ВНИМАНИЕ: Восстанавливаются только boot и system разделы!"
 sleep 3
 #################################################################
 # Создаем временный файл с исправленными путями к диску и разделам
@@ -381,7 +376,7 @@ sed -e "s|^device:.*|device: /dev/$namedisk|" \
 sfdisk /dev/$namedisk < "$temp_dump"
 rm -f "$temp_dump"
 zcat ./sda1.pcl.gz | partclone.vfat -r -N -o /dev/$boot
-zcat ./sda2.pcl.gz | partclone.btrfs -r -N -o /dev/$root
+zcat ./sda2.pcl.gz | partclone.ntfs -r -N -o /dev/$system
 clear
 reboot
 OVER_EOF
@@ -411,11 +406,22 @@ backup() {
 
     clear
     echo "=========================================="
-    echo " БЕКАП ЗАВЕРШЁН"
+    echo " БЕКАП WINDOWS ЗАВЕРШЁН"
     echo "=========================================="
     echo ""
     echo " Директория: $bacdir"
     echo " Время:      $hours ч $minutes м $seconds с"
+    echo ""
+    echo " Скопированы разделы:"
+    echo "  boot (vfat):   $boot"
+    echo "  system (ntfs): $system"
+    echo ""
+    echo " Файлы бекапа:"
+    echo "  sda.dump      - таблица разделов"
+    echo "  sda1.pcl.gz   - boot раздел"
+    echo "  sda2.pcl.gz   - system раздел"
+    echo "  readme.txt    - информация о бекапе"
+    echo "  over.sh       - скрипт восстановления"
     echo ""
 }
 
@@ -429,7 +435,6 @@ main() {
     setup_font
     show_time
     select_disk
-    select_partitions
     confirm_selection
     create_backup_dir
     select_compression
