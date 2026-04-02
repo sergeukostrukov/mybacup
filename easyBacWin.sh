@@ -406,11 +406,33 @@ case "$action_choice" in
         ;;
 esac
 
-rm -f "$temp_dump"
-zcat ./sda1.pcl.gz | partclone.vfat -r -N -o /dev/$boot
-zcat ./sda2.pcl.gz | partclone.ntfs -r -N -o /dev/$system
-clear
-reboot
+    rm -f "$temp_dump"
+    zcat ./sda1.pcl.gz | partclone.vfat -r -N -o /dev/$boot
+    zcat ./sda2.pcl.gz | partclone.ntfs -r -N -o /dev/$system
+    clear
+    echo "=========================================="
+    echo " ВОССТАНОВЛЕНИЕ ЗАВЕРШЕНО"
+    echo "=========================================="
+    echo ""
+    echo " Все разделы успешно восстановлены на диск /dev/$namedisk"
+    echo ""
+    echo " Выберите дальнейшее действие:"
+    echo " 1) Перезагрузить систему"
+    echo " 2) Выйти из скрипта"
+    echo ""
+    read -p " -> " final_choice
+    
+    case "$final_choice" in
+        1)
+            echo "Перезагрузка системы..."
+            reboot
+            ;;
+        *)
+            echo "Выход из скрипта."
+            echo "Не забудьте перезагрузить систему для загрузки с восстановленного диска."
+            exit 0
+            ;;
+    esac
 OVER_EOF
     chmod +x "./$bacdir/over.sh"
 }
