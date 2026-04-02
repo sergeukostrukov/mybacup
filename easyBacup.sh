@@ -335,7 +335,7 @@ temp_dump=$(mktemp)
 old_disk=$(grep '^device:' sda.dump | cut -d'/' -f3)
 
 # Определяем, был ли исходный диск NVMe (имеет префикс p в именах разделов)
-old_is_nvme=$(grep -q "^/dev/${old_disk}p" sda.dump && echo "yes" || echo "no")
+old_is_nvme=$(grep -q "/dev/${old_disk}p" sda.dump && echo "yes" || echo "no")
 
 # Определяем префикс для нового диска
 new_prefix=""
@@ -351,10 +351,42 @@ fi
 
 # Заменяем device: и все пути к разделам с учетом префиксов
 sed -e "s|^device:.*|device: /dev/$namedisk|" \
-    -e "s|/dev/${old_disk}${old_prefix}|/dev/$namedisk${new_prefix}|g" \
+    -e "s|/dev/${old_disk}${old_prefix}\([0-9]\)|/dev/$namedisk${new_prefix}\1|g" \
     sda.dump > "$temp_dump"
 
-sfdisk /dev/$namedisk < "$temp_dump"
+# Показываем содержимое исправленного файла и спрашиваем подтверждение
+echo ""
+echo "=========================================="
+echo "Содержимое исправленного файла sda.dump:"
+echo "=========================================="
+cat "$temp_dump"
+echo "=========================================="
+echo ""
+echo "Старое имя диска: $old_disk (префикс: '$old_prefix')"
+echo "Новое имя диска: $namedisk (префикс: '$new_prefix')"
+echo ""
+echo "Выберите действие:"
+echo "1) Применить изменения таблицы разделов (рекомендуется)"
+echo "2) Использовать оригинальный файл dump (без подмены путей)"
+echo "3) Отменить восстановление"
+read -p " -> " action_choice
+
+case "$action_choice" in
+    1)
+        echo "Применяем изменения таблицы разделов..."
+        sfdisk /dev/$namedisk < "$temp_dump"
+        ;;
+    2)
+        echo "Используем оригинальный файл dump..."
+        sfdisk /dev/$namedisk < sda.dump
+        ;;
+    *)
+        echo "Восстановление отменено."
+        rm -f "$temp_dump"
+        exit 1
+        ;;
+esac
+
 rm -f "$temp_dump"
 zcat ./sda1.pcl.gz | partclone.vfat -r -N -o /dev/$boot
 zcat ./sda2.pcl.gz | partclone.btrfs -r -N -o /dev/$root
