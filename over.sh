@@ -1,4 +1,12 @@
 #!/bin/bash
+
+# Проверка прав root
+if [[ $EUID -ne 0 ]]; then
+    echo "Ошибка: для работы скрипта требуются права root."
+    echo "Запустите скрипт с sudo: sudo ./over.sh"
+    exit 1
+fi
+
 clear
 lsblk
 echo ' Выберите целевой диск для восстановления (например: sda, vda, nvme0n1):'

@@ -10,6 +10,13 @@
 
 set -euo pipefail
 
+# Проверка прав root
+if [[ $EUID -ne 0 ]]; then
+    echo "Ошибка: для работы скрипта требуются права root."
+    echo "Запустите скрипт с sudo: sudo ./easyBacWin.sh"
+    exit 1
+fi
+
 #------Глобальные переменные---------------------------------
 namedisk=""
 boot=""
@@ -325,6 +332,14 @@ backup_partitions() {
 create_restore_script() {
     cat > "./$bacdir/over.sh" <<'OVER_EOF'
 #!/bin/bash
+
+# Проверка прав root
+if [[ $EUID -ne 0 ]]; then
+    echo "Ошибка: для работы скрипта требуются права root."
+    echo "Запустите скрипт с sudo: sudo ./over.sh"
+    exit 1
+fi
+
 clear
 lsblk
 echo ' Выберите целевой диск для восстановления (например: sda, vda, nvme0n1):'
