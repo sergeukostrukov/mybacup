@@ -2,7 +2,7 @@
 
 ## О проекте
 
-Репозиторий с bash-скриптами для резервного копирования дисков Linux/Windows систем. Скрипты используют `partclone`, `sfdisk`, `gzip`.
+Репозиторий с bash-скриптами для резервного копирования дисков Linux/Windows систем и установки snap-пакетов в Arch Linux. Скрипты резервного копирования используют `partclone`, `sfdisk`, `gzip`.
 
 ```
 .
@@ -10,6 +10,8 @@
 ├── bacup_win.sh   # Windows (ntfs + vfat) - полная версия
 ├── easyBacup.sh   # Linux (btrfs + vfat) - упрощенная версия
 ├── easyBacWin.sh  # Windows (ntfs + vfat) - упрощенная версия
+├── archSnap.sh    # Установка snap-пакетов в Arch Linux
+├── over.sh        # Скрипт восстановления (генерируется)
 ├── README.md
 ├── AGENTS.md
 └── SESSION_NOTES.md
