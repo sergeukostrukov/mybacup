@@ -31,29 +31,7 @@
 - Первый раздел → vfat (boot)
 - Второй раздел → ntfs (system)
 
-## Скрипт установки snap-пакетов
 
-### archSnap.sh
-Устанавливает snapd в Arch Linux для работы с snap-пакетами.
-
-**Что делает:**
-1. Устанавливает git: `sudo pacman -Sy git`
-2. Клонирует AUR-пакет snapd
-3. Собирает и устанавливает пакет через makepkg
-4. Включает systemd-сервисы snapd.socket и snapd.apparmor.service
-5. Создает символическую ссылку `/var/lib/snapd/snap → /snap`
-
-**Использование:**
-```bash
-# Установка snap-пакетов
-snap install <название_программы>
-
-# Список установленных snap-пакетов
-snap list
-
-# Удаление snapd
-sudo pacman -Rs snapd
-```
 
 ## Общие требования
 
