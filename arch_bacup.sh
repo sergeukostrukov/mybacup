@@ -150,7 +150,7 @@ screen_select_disk() {
     done
 
     local choice
-    choice=$(whiptail --title "Выбор диска" \
+    choice=$(whiptail --title "Выбор копируемого диска" \
         --menu "${all_info}\nВыберите диск для резервного копирования:" \
         20 70 12 \
         "${menu_items[@]}" 3>&1 1>&2 2>&3) || true
